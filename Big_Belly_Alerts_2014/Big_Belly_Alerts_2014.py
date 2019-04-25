@@ -20,10 +20,13 @@ df['fullness'] = df['fullness'].apply(lambda x: 0 if x == 'GREEN'
 df['collection'] = df['collection'].astype(np.int)
 
 # Get unique locations
-locations, counts = np.unique(df['Location'], return_counts = True)
-print('Number of unique locations: {}'.format(len(locations)))
+description, counts = np.unique(df['description'], return_counts = True)
+print('Number of unique compactors: {}'.format(len(description)))
 
 str_coords = df['Location'].apply(lambda x: x.split())
+
+# we have counts and description
+# TODO need to correlate description with counts AND coordinates
 
 coords = []
 x = []
@@ -36,6 +39,19 @@ for row in str_coords:
     k = float(row[1].strip(string.punctuation))
     
     coords.append([j, k])
+
+plt.scatter(x, y)
+plt.title('Locations of Big Belly Compactors')
+plt.show()
+
+to_plot = {}
+
+for i, (desc, num) in enumerate(zip(description, counts)):
+#    to_plot[desc] = [counts, df.iloc[i][]]
+    # TODO Working on this line
+   print(i)
+   print(desc)
+   print(num)
 
 # see if you can predict when cans are actually getting collected
 # then you can see if this system is actually working
