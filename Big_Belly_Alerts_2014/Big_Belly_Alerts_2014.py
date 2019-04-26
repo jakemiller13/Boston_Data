@@ -37,7 +37,7 @@ lon = []
 for row in locs:
     row_split = row.split()    
     lat.append(float(row_split[0].strip(string.punctuation)))
-    lon.append(float(row_split[1].strip(string.punctuation)))
+    lon.append(-float(row_split[1].strip(string.punctuation)))
 
 '''
 coords = []
@@ -65,10 +65,30 @@ plt.show()
 # TODO use collection numbers to indicate colors (size of bubbles?)
 # TODO see if there's a trend in when/where cans are emptied
 
+lon_diff = 0.2 * abs(max(lon) - min(lon)) # add 20% of difference
+lat_diff = 0.2 * abs(max(lat) - min(lat))
 
+m = Basemap(projection = 'merc',
+            llcrnrlon = min(lon) - lon_diff,
+            llcrnrlat = min(lat) - lat_diff,
+            urcrnrlon = max(lon) + lon_diff,
+            urcrnrlat = max(lat) + lat_diff,
+            area_thresh = 0.1,
+            resolution = 'h')
+m.drawcoastlines()
+m.drawcountries()
+m.fillcontinents(color = 'coral')
+m.drawmapboundary()
+
+x, y = m(lon, lat)
+m.plot(x, y, 'bo', markersize = 10, alpha = 0.1)
+
+plt.show()
+
+'''
 fig = plt.figure(figsize=(8, 8))
 m = Basemap(projection='lcc', lat_0=42.3, lon_0=-71,
-            width=22500, height=30000, resolution='h')
+            width=22500, height=30000, resolution='l')
 #m.fillcontinents(color="#FFDDCC", lake_color='#DDEEFF')
 #m.drawmapboundary(fill_color="#DDEEFF")
 #m.drawcoastlines()
@@ -77,17 +97,16 @@ m.shadedrelief()
 m.drawcoastlines(color='gray')
 m.drawcountries(color='gray')
 m.drawstates(color='gray')
-
-m.scatter(lon, lat, latlon = True,
-#          c=np.log10(population),
-          c = loc_counts,
-          cmap = 'Reds')#,
-#          alpha = 0.5)
-
+x, y = m(lon, lat)
+#m.scatter(lon, lat, latlon = True,
+#          c = loc_counts,
+#          cmap = 'Reds')
+m.plot(x, y, 'bo', markersize = 100)
+plt.show()
 
 #########
 fig = plt.figure(figsize=(8, 8))
-m = Basemap(projection='lcc', resolution='h', 
+m = Basemap(projection='lcc', resolution='l', 
             lat_0=42.3, lon_0=-71,
             width=1E6, height=1.2E6)
 m.shadedrelief()
@@ -100,3 +119,4 @@ m.drawstates(color='gray')
 m.scatter(lon, lat, latlon=True,
           s= loc_counts,
           cmap='Reds', alpha=0.5)
+'''
