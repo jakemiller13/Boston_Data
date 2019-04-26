@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import string
 import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
 
 # Load dataframe, parse datetimes
 df = pd.read_csv('big-belly-alerts-2014.csv', parse_dates = ['timestamp'])
@@ -22,6 +23,7 @@ df['collection'] = df['collection'].astype(np.int)
 # Get unique locations
 description, counts = np.unique(df['description'], return_counts = True)
 print('Number of unique compactors: {}'.format(len(description)))
+locs, loc_counts = np.unique(df['Location'], return_counts = True)
 
 str_coords = df['Location'].apply(lambda x: x.split())
 
@@ -29,11 +31,21 @@ str_coords = df['Location'].apply(lambda x: x.split())
 # TODO need to correlate description with counts AND coordinates
 
 coords = []
+lat = []
+lon = []
+
+for row in locs:
+    row_split = row.split()    
+    lat.append(float(row_split[0].strip(string.punctuation)))
+    lon.append(float(row_split[1].strip(string.punctuation)))
+
+'''
+coords = []
 x = []
 y = []
 for row in str_coords:
-    x.append(float(row[0].strip(string.punctuation)))
-    y.append(float(row[1].strip(string.punctuation)))
+    x.append(float(row[1].strip(string.punctuation)))
+    y.append(float(row[0].strip(string.punctuation)))
     
     j = float(row[0].strip(string.punctuation))
     k = float(row[1].strip(string.punctuation))
@@ -43,15 +55,7 @@ for row in str_coords:
 plt.scatter(x, y)
 plt.title('Locations of Big Belly Compactors')
 plt.show()
-
-to_plot = {}
-
-for i, (desc, num) in enumerate(zip(description, counts)):
-#    to_plot[desc] = [counts, df.iloc[i][]]
-    # TODO Working on this line
-   print(i)
-   print(desc)
-   print(num)
+'''
 
 # see if you can predict when cans are actually getting collected
 # then you can see if this system is actually working
@@ -60,3 +64,39 @@ for i, (desc, num) in enumerate(zip(description, counts)):
 # TODO change location to numbers, plot on axes
 # TODO use collection numbers to indicate colors (size of bubbles?)
 # TODO see if there's a trend in when/where cans are emptied
+
+
+fig = plt.figure(figsize=(8, 8))
+m = Basemap(projection='lcc', lat_0=42.3, lon_0=-71,
+            width=22500, height=30000, resolution='h')
+#m.fillcontinents(color="#FFDDCC", lake_color='#DDEEFF')
+#m.drawmapboundary(fill_color="#DDEEFF")
+#m.drawcoastlines()
+#plt.title('Map of Boston')
+m.shadedrelief()
+m.drawcoastlines(color='gray')
+m.drawcountries(color='gray')
+m.drawstates(color='gray')
+
+m.scatter(lon, lat, latlon = True,
+#          c=np.log10(population),
+          c = loc_counts,
+          cmap = 'Reds')#,
+#          alpha = 0.5)
+
+
+#########
+fig = plt.figure(figsize=(8, 8))
+m = Basemap(projection='lcc', resolution='h', 
+            lat_0=42.3, lon_0=-71,
+            width=1E6, height=1.2E6)
+m.shadedrelief()
+m.drawcoastlines(color='gray')
+m.drawcountries(color='gray')
+m.drawstates(color='gray')
+
+# 2. scatter city data, with color reflecting population
+# and size reflecting area
+m.scatter(lon, lat, latlon=True,
+          s= loc_counts,
+          cmap='Reds', alpha=0.5)
