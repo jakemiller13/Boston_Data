@@ -61,12 +61,8 @@ plt.show()
 # then you can see if this system is actually working
 # try a linear SVC
 
-# TODO change location to numbers, plot on axes
-# TODO use collection numbers to indicate colors (size of bubbles?)
-# TODO see if there's a trend in when/where cans are emptied
-
-lon_diff = 0.2 * abs(max(lon) - min(lon)) # add 20% of difference
-lat_diff = 0.2 * abs(max(lat) - min(lat))
+lon_diff = 0.1 * abs(max(lon) - min(lon)) # add 10% of difference
+lat_diff = 0.1 * abs(max(lat) - min(lat))
 
 m = Basemap(projection = 'merc',
             llcrnrlon = min(lon) - lon_diff,
@@ -75,9 +71,10 @@ m = Basemap(projection = 'merc',
             urcrnrlat = max(lat) + lat_diff,
             area_thresh = 0.1,
             resolution = 'h')
-m.drawcoastlines()
-m.drawcountries()
-m.fillcontinents(color = 'coral')
+m.drawcoastlines(color = 'gray')
+m.drawcountries(color = 'gray')
+#m.fillcontinents(color = 'coral')
+m.shadedrelief()
 m.drawmapboundary()
 
 x, y = m(lon, lat)
