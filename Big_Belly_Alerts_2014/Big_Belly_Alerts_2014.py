@@ -73,7 +73,7 @@ m = Basemap(projection = 'merc',
             resolution = 'h')
 m.drawcoastlines(color = 'gray')
 m.drawcountries(color = 'gray')
-#m.fillcontinents(color = 'coral')
+m.fillcontinents(color = 'coral')
 m.shadedrelief()
 m.drawmapboundary()
 
