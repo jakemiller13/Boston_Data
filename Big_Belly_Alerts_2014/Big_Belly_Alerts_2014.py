@@ -39,24 +39,6 @@ for row in locs:
     lat.append(float(row_split[0].strip(string.punctuation)))
     lon.append(-float(row_split[1].strip(string.punctuation)))
 
-'''
-coords = []
-x = []
-y = []
-for row in str_coords:
-    x.append(float(row[1].strip(string.punctuation)))
-    y.append(float(row[0].strip(string.punctuation)))
-    
-    j = float(row[0].strip(string.punctuation))
-    k = float(row[1].strip(string.punctuation))
-    
-    coords.append([j, k])
-
-plt.scatter(x, y)
-plt.title('Locations of Big Belly Compactors')
-plt.show()
-'''
-
 # see if you can predict when cans are actually getting collected
 # then you can see if this system is actually working
 # try a linear SVC
@@ -71,10 +53,9 @@ m = Basemap(projection = 'merc',
             urcrnrlat = max(lat) + lat_diff,
             area_thresh = 0.1,
             resolution = 'h')
-m.drawcoastlines(color = 'gray')
-m.drawcountries(color = 'gray')
+m.drawcoastlines()
+m.drawcountries()
 m.fillcontinents(color = 'coral')
-m.shadedrelief()
 m.drawmapboundary()
 
 x, y = m(lon, lat)
