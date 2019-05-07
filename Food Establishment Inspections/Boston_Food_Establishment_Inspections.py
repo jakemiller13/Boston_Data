@@ -58,7 +58,7 @@ def inc_address(link, inc):
     Retrieve 1000 rows at a time to avoid timing out
     '''
     increment = inc * 1000
-    link = link + '?$skip=' + str(increment) + '&$top=500'
+    link = link + '?$skip=' + str(increment) + '&$top=1000'
     return link
     
 '''
