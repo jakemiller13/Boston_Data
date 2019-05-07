@@ -11,9 +11,61 @@ Created on Sat May  4 16:05:44 2019
 
 import pandas as pd
 import numpy as np
-from datetime import datetime
+import xml.etree.ElementTree as ET
+from urllib.request import urlopen
 
-df = pd.read_csv('tmp_8g7ojgx.csv')
+# API Link
+link = 'https://data.boston.gov/datastore/odata3.0/'\
+        + '4582bec6-2b4f-4f9e-bc55-cbaa73117f4c'
+
+response = urlopen(link).read().decode('utf-8')
+root = ET.fromstring(response)
+
+columns = ['id',
+           'businessname',
+           'dbaname',
+           'legalowner',
+           'namelast',
+           'namefirst',
+           'licenseno',
+           'issdttm',
+           'expdttm',
+           'licstatus',
+           'licensecat',
+           'descript',
+           'result',
+           'resultdttm',
+           'violation',
+           'viollevel',
+           'violdesc',
+           'violdttm',
+           'violstatus',
+           'statusdate',
+           'comments',
+           'address',
+           'city',
+           'state',
+           'zip',
+           'property_id',
+           'location']
+
+new_list = []
+
+count = 4 # first 4 entries don't carry any info
+while True:
+    new_entry = []
+    try:
+        for child in root[count][-1][-1]:
+            new_entry.append(child.text)
+        new_list.append(new_entry)
+        count += 1
+        print('count = ' + str(count))
+    except IndexError:
+        break
+
+df = pd.DataFrame(new_list, columns = columns) # Take care of NaN values
+
+#df = pd.read_csv('tmp_8g7ojgx.csv')
 
 datetime_cols = ['issdttm', 'expdttm', 'resultdttm', 'violdttm']
 str_cols = ['viollevel', 'violstatus', 'violdesc']
@@ -25,7 +77,7 @@ print(df.isnull().sum())
 df.drop(columns = ['dbaname'], inplace = True)
 
 # Example of missing datetime
-print('\nMissing datetime: ' + df.iloc[4663]['issdttm'])
+#print('\nMissing datetime: ' + df.iloc[4663]['issdttm'])
 
 # Drop any rows that don't have issue dates - ok to not have expiration date
 df.drop(df.loc[df['issdttm'] == ' '].index, inplace = True)
