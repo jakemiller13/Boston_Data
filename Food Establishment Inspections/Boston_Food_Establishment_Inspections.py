@@ -13,12 +13,11 @@ import pandas as pd
 import numpy as np
 import xml.etree.ElementTree as ET
 from urllib.request import urlopen
+from urllib.error import HTTPError
 
 # API Link
 link = 'https://data.boston.gov/datastore/odata3.0/'\
         + '4582bec6-2b4f-4f9e-bc55-cbaa73117f4c'
-
-# TODO this API only returns 500 rows at a time, need to loop through it
 
 # Create empty dataframe
 columns = ['id',
@@ -58,47 +57,39 @@ def inc_address(link, inc):
     Retrieve 1000 rows at a time to avoid timing out
     '''
     increment = inc * 1000
-    link = link + '?$skip=' + str(increment) + '&$top=1000'
-    return link
-    
-'''
-tree[-1].attrib
-Out[106]: 
-{'rel': 'next',
- 'href': 'https://data.boston.gov/datastore/odata3.0/4582bec6-2b4f-4f9e-bc55-cbaa73117f4c?$skip=500&$top=500'}
-
-temp_tree[-1].attrib
-Out[107]: {}
-''' 
-    
-    
-    
-
+    link = link + '?$top=1000&$skip=' + str(increment)
+    return link  
 
 def get_data(link, df):
     '''
     Returns data from link as ElementTree.Element
+    Occasionally runs into HTTPError mid-execution
+    If that happens, returns df as-is. To continue running, re-execute this
+        function with correct increment fed into inc_address to get
+        starting link address
     '''
-#    response = urlopen(link).read().decode('utf-8')
-#    tree = ET.fromstring(response)
-#    return tree
     count = 0
-    while True:
-        link = inc_address(link, count)
-        response = urlopen(link).read().decode('utf-8')
-        tree = ET.fromstring(response)
-        if tree[-1].attrib == {}:
-            temp_df = create_dataframe(tree, start = 4, columns = columns)
-            df.append(temp_df)
-            break
-        else:
-            temp_df = create_dataframe(tree, start = 4, columns = columns)
-            df.append(temp_df)
-            count += 1
+    while count < 25: #True: # uncomment this when running full script
+        try:
+            print('Count: ' + str(count) + ' | df shape: ' + str(df.shape))
+            link = inc_address(link, count)
+            response = urlopen(link).read().decode('utf-8')
+            tree = ET.fromstring(response)
+            if tree[-1].attrib == {}:
+                temp_df = create_dataframe(tree, start = 4, columns = columns)
+                df = pd.concat([df, temp_df], ignore_index = True)
+                break
+            else:
+                temp_df = create_dataframe(tree, start = 4, columns = columns)
+                df = pd.concat([df, temp_df], ignore_index = True)
+                count += 1
+        except HTTPError:
+            return df
     return df
 
 def create_dataframe(tree, start, columns):
     '''
+    Used in get_data()
     Returns dataframe created from "tree"
     Must supply "start" which is root level at which info starts, e.g. "4"
     "columns" are column headers for dataframe
@@ -125,8 +116,7 @@ def split_datetime(dttm_col):
 ###############
 # GATHER DATA #
 ###############
-tree = get_data(link)
-df = create_dataframe(tree, start = 4, columns = columns)
+df = get_data(link, df)
 
 
 ##########################
