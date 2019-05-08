@@ -60,7 +60,7 @@ def inc_address(link, inc):
     link = link + '?$top=1000&$skip=' + str(increment)
     return link  
 
-def get_data(link, df):
+def get_data(df, link):
     '''
     Returns data from link as ElementTree.Element
     Occasionally runs into HTTPError mid-execution
@@ -106,30 +106,54 @@ def create_dataframe(tree, start, columns):
             break
     return pd.DataFrame(info_list, columns = columns)
 
-def split_datetime(dttm_col):
+def split_datetime(df, dttm_col):
     '''
     Splits datetime column into 2 separate date & time columns
     Returns [date, time]
-    '''
+    '''    
+    date, time = [], []
     dttm_split = df[dttm_col].apply(lambda x: x.split())
+    for i in dttm_split:
+        try:
+            date.append(i[0])
+            time.append(i[1])
+        except IndexError:
+            date.append(np.nan)
+            time.append(np.nan)
+    return date, time
 
-###############
-# GATHER DATA #
-###############
-df = get_data(link, df)
+def add_dttm_cols(df, dttm_col, date, time):
+    '''
+    Adds new columns in df for "date" and "time"
+    "date" and "time" are from split_datetime()
+    "dttm_col" is the string name of column being split
+    '''
+    idx = list(df.columns).index(dttm_col)
+    col_name = dttm_col[:-4]
+    df.insert(idx + 1, col_name + '_date', date)
+    df.insert(idx + 2, col_name + '_time', time)
 
+############################
+# GATHER AND CLEAN UP DATA #
+############################
+df = get_data(df, link)
+
+datetime_cols = ['issdttm', 'expdttm', 'resultdttm', 'violdttm']
+str_cols = ['viollevel', 'violstatus', 'violdesc']
+
+for col in datetime_cols:
+    date, time = split_datetime(df, col)
+    add_dttm_cols(df, col, date, time)
+
+df[str_cols] = df[str_cols].astype(str)
 
 ##########################
 # DESIGNATE COLUMN TYPES #
 ##########################
-datetime_cols = ['issdttm', 'expdttm', 'resultdttm', 'violdttm']
-str_cols = ['viollevel', 'violstatus', 'violdesc']
-
-df[str_cols] = df[str_cols].astype(str)
 
 ######
 
-
+'''
 print(df.iloc[0])
 print()
 print(df.isnull().sum())
@@ -153,3 +177,4 @@ print('\nViolation levels: \n' + str(np.unique(df['viollevel'])))
 #TODO can you infer business name from property id?
 #TODO cast columns to string that need to be string
 #TODO cast datetime columns to datetime
+'''
