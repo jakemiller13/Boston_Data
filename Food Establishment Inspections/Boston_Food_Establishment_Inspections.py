@@ -14,6 +14,7 @@ import numpy as np
 import xml.etree.ElementTree as ET
 from urllib.request import urlopen
 from urllib.error import HTTPError
+import matplotlib.pyplot as plt
 
 # API Link
 link = 'https://data.boston.gov/datastore/odata3.0/'\
@@ -127,25 +128,57 @@ def add_dttm_cols(df, dttm_col, date, time):
     Adds new columns in df for "date" and "time"
     "date" and "time" are from split_datetime()
     "dttm_col" is the string name of column being split
+    Returns new column names, used when converting to pd.datetime
     '''
     idx = list(df.columns).index(dttm_col)
     col_name = dttm_col[:-4]
-    df.insert(idx + 1, col_name + '_date', date)
-    df.insert(idx + 2, col_name + '_time', time)
+    date_name = col_name + '_date'
+    time_name = col_name + '_time'
+    df.insert(idx + 1, date_name, date)
+    df.insert(idx + 2, time_name, time)
+    return date_name, time_name
+
+def date_counts(df, date_col):
+    '''
+    Returns dates and counts of "date_col"
+    Used when counting violations given
+    Temporarily drops rows that are NaT to avoid extra counting
+    '''
+    return np.unique(df.dropna(subset = [date_col])[date_col],
+                     return_counts = True)
 
 ############################
 # GATHER AND CLEAN UP DATA #
 ############################
 df = get_data(df, link)
+copy_df = df.copy() # this is here to help troubleshoot
 
+# Split datetime columns into separate date and time columns
 datetime_cols = ['issdttm', 'expdttm', 'resultdttm', 'violdttm']
-str_cols = ['viollevel', 'violstatus', 'violdesc']
+date_cols = []
+time_cols = []
 
 for col in datetime_cols:
     date, time = split_datetime(df, col)
-    add_dttm_cols(df, col, date, time)
+    date_name, time_name = add_dttm_cols(df, col, date, time)
+    date_cols.append(date_name)
+    time_cols.append(time_name)
 
+# Convert strings to dates
+for col in date_cols:
+    df[col] = pd.to_datetime(df[col], errors = 'ignore')
+
+# Drop rows that are missing date-related info
+str_cols = ['viollevel', 'violstatus', 'violdesc']
 df[str_cols] = df[str_cols].astype(str)
+
+
+###################################
+# PLOT DATES OF ISSUED VIOLATIONS #
+###################################
+viol_date, viol_counts = date_counts(df, 'iss_date')
+plt.plot(viol_date, viol_counts)
+
 
 ##########################
 # DESIGNATE COLUMN TYPES #
