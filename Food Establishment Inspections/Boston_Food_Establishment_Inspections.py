@@ -70,7 +70,7 @@ def get_data(df, link):
         starting link address
     '''
     count = 0
-    while count < 25: #True: # uncomment this when running full script
+    while True: # uncomment when running full, otherwise = 25
         try:
             print('Count: ' + str(count) + ' | df shape: ' + str(df.shape))
             link = inc_address(link, count)
