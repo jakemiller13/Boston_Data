@@ -7,7 +7,6 @@ Created on Sat May  4 16:05:44 2019
 """
 
 # https://data.boston.gov/dataset/food-establishment-inspections
-# There is an API to query this if you want to figure it out
 
 import pandas as pd
 import numpy as np
@@ -15,6 +14,7 @@ import xml.etree.ElementTree as ET
 from urllib.request import urlopen
 from urllib.error import HTTPError
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # API Link
 link = 'https://data.boston.gov/datastore/odata3.0/'\
@@ -177,14 +177,47 @@ df[str_cols] = df[str_cols].astype(str)
 # PLOT DATES OF ISSUED VIOLATIONS #
 ###################################
 viol_date, viol_counts = date_counts(df, 'iss_date')
+
 plt.plot(viol_date, viol_counts)
+plt.xlabel('Date of Issue')
+plt.ylabel('Number of Violations Issued')
+plt.title('Total Violations Issued')
+plt.show()
 
+plt.plot(viol_date, viol_counts)
+plt.xlim(np.datetime64('2011-01-01T00:00:00.000000000'),
+         np.datetime64('2013-12-31T00:00:00.000000000'))
+plt.xlabel('Date of Issue')
+plt.xticks(rotation = 20)
+plt.ylabel('Number of Violations Issued')
+plt.title('Violations Issued Between 2011 and 2013')
+plt.show()
 
-##########################
-# DESIGNATE COLUMN TYPES #
-##########################
+####################################
+# SEE WHAT WE CAN DEDUCE FROM PLOT #
+####################################
+top_5_index = viol_counts.argsort()[-5:][::-1]
+top_5_dates = viol_date[top_5_index]
+top_5_counts = viol_counts[top_5_index]
+print('\nTop 5 days violations were issued [number issued]:')
+for i, j in zip(pd.DatetimeIndex(top_5_dates), top_5_counts):
+    print(str(i) + ' [' + str(j) + ']')
 
-######
+inspected = df.loc[
+        (df['iss_date'] == np.datetime64('2012-02-15T00:00:00.000000000')) | 
+        (df['iss_date'] == np.datetime64('2012-02-14T00:00:00.000000000')) |
+        (df['iss_date'] == np.datetime64('2012-02-13T00:00:00.000000000'))]
+
+insp_names, insp_counts = np.unique(inspected['businessname'],
+                                    return_counts = True)
+top_20_insp_index = insp_names.argsort()[-20:][::-1]
+top_20_names = [i.title() for i in insp_names[top_20_insp_index]]
+top_20_counts = insp_counts[top_20_insp_index]
+
+ax = sns.barplot( x = top_20_counts, y = top_20_names)        
+ax.set_title('Restaurant Violations 02/13/12-02/15/12')
+ax.grid(True, axis = 'x')
+plt.show()
 
 '''
 print(df.iloc[0])
