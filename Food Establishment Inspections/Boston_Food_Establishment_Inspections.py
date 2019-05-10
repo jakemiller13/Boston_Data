@@ -72,7 +72,8 @@ def get_data(df, link):
     count = 0
     while True: # uncomment when running full, otherwise = 25
         try:
-            print('Count: ' + str(count) + ' | df shape: ' + str(df.shape))
+            if count % 10 == 0:
+                print('Count: ' + str(count) + ' | df shape: ' + str(df.shape))
             link = inc_address(link, count)
             response = urlopen(link).read().decode('utf-8')
             tree = ET.fromstring(response)
@@ -176,7 +177,7 @@ df[str_cols] = df[str_cols].astype(str)
 ###################################
 # PLOT DATES OF ISSUED VIOLATIONS #
 ###################################
-viol_date, viol_counts = date_counts(df, 'iss_date')
+viol_date, viol_counts = date_counts(df, 'viol_date')
 
 plt.plot(viol_date, viol_counts)
 plt.xlabel('Date of Issue')
@@ -186,7 +187,7 @@ plt.show()
 
 plt.plot(viol_date, viol_counts)
 plt.xlim(np.datetime64('2011-01-01T00:00:00.000000000'),
-         np.datetime64('2013-12-31T00:00:00.000000000'))
+         np.datetime64('2012-12-31T00:00:00.000000000'))
 plt.xlabel('Date of Issue')
 plt.xticks(rotation = 20)
 plt.ylabel('Number of Violations Issued')
@@ -196,11 +197,11 @@ plt.show()
 ####################################
 # SEE WHAT WE CAN DEDUCE FROM PLOT #
 ####################################
-top_5_index = viol_counts.argsort()[-5:][::-1]
-top_5_dates = viol_date[top_5_index]
-top_5_counts = viol_counts[top_5_index]
-print('\nTop 5 days violations were issued [number issued]:')
-for i, j in zip(pd.DatetimeIndex(top_5_dates), top_5_counts):
+top_10_index = viol_counts.argsort()[-10:][::-1]
+top_10_dates = viol_date[top_10_index]
+top_10_counts = viol_counts[top_10_index]
+print('\nTop 10 days violations were identified [number identified]:')
+for i, j in zip(pd.DatetimeIndex(top_10_dates), top_10_counts):
     print(str(i) + ' [' + str(j) + ']')
 
 inspected = df.loc[
@@ -210,37 +211,45 @@ inspected = df.loc[
 
 insp_names, insp_counts = np.unique(inspected['businessname'],
                                     return_counts = True)
-top_20_insp_index = insp_names.argsort()[-20:][::-1]
+top_20_insp_index = insp_counts.argsort()[-20:][::-1]
 top_20_names = [i.title() for i in insp_names[top_20_insp_index]]
 top_20_counts = insp_counts[top_20_insp_index]
 
-ax = sns.barplot( x = top_20_counts, y = top_20_names)        
+ax = sns.barplot(x = top_20_counts, y = top_20_names)        
 ax.set_title('Restaurant Violations 02/13/12-02/15/12')
 ax.grid(True, axis = 'x')
 plt.show()
 
-'''
-print(df.iloc[0])
-print()
-print(df.isnull().sum())
+#######################################
+# SEE WHO GOT MOST VIOLATIONS IN 2018 #
+#######################################
+rows_2018 = [row for row in range(len(df))
+             if '2018' in str(df.iloc[row].viol_date)]
+df_2018 = df.iloc[rows_2018]
+names_2018, counts_2018 = np.unique(df_2018['businessname'],
+                                    return_counts = True)
+top_2018_index = counts_2018.argsort()[-20:][::-1]
+top_2018_counts = counts_2018[top_2018_index]
+top_2018_names = [i.title() for i in names_2018[top_2018_index]]
 
-df.drop(columns = ['dbaname'], inplace = True)
+ax = sns.barplot(x = top_2018_counts, y = top_2018_names)
+ax.set_title('Violations Found in 2018')
+ax.grid(True, axis = 'x')
+plt.show()
 
-# Example of missing datetime
-#print('\nMissing datetime: ' + df.iloc[4663]['issdttm'])
+#########################################
+# WHAT IS MOST COMMON TYPE OF VIOLATION #
+#########################################
+viol_types, viol_type_counts = np.unique(df.violdesc, return_counts = True)
+top_viol_index = viol_type_counts.argsort()[-20:][::-1]
+top_viols = viol_types[top_viol_index]
+top_viols_counts = viol_type_counts[top_viol_index]
 
-# Drop any rows that don't have issue dates - ok to not have expiration date
-df.drop(df.loc[df['issdttm'] == ' '].index, inplace = True)
+ax = sns.barplot(x = top_viols_counts, y = top_viols)
+ax.set_title('Top Violations')
+ax.grid(True, axis = 'x')
+plt.show()
 
-# Force string columns to actually be strings
-
-
-# Print violation descriptions
-print('\nTypes of violations: \n' + str(np.unique(df['violdesc'])))
-print('\nViolation levels: \n' + str(np.unique(df['viollevel'])))
-
-#TODO can you infer any legalowners from business name?
-#TODO can you infer business name from property id?
-#TODO cast columns to string that need to be string
-#TODO cast datetime columns to datetime
-'''
+# TODO make a function for plots
+# TODO figure out what "violstatus" is
+# TODO can you just ask them? opengov@cityofboston.gov
