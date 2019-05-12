@@ -70,10 +70,11 @@ def get_data(df, link):
         starting link address
     '''
     count = 0
-    while True: # uncomment when running full, otherwise = 25
+    while count < 25:#True: # uncomment when running full, otherwise = 25
         try:
-            if count % 10 == 0:
-                print('Count: ' + str(count) + ' | df shape: ' + str(df.shape))
+#            if count % 10 == 0:
+#                print('Count: ' + str(count) + ' | df shape: ' + str(df.shape))
+            print('Count: ' + str(count) + ' | df shape: ' + str(df.shape))
             link = inc_address(link, count)
             response = urlopen(link).read().decode('utf-8')
             tree = ET.fromstring(response)
@@ -180,18 +181,23 @@ df[str_cols] = df[str_cols].astype(str)
 viol_date, viol_counts = date_counts(df, 'viol_date')
 
 plt.plot(viol_date, viol_counts)
+plt.ylim(0, max(viol_counts) + 10)
 plt.xlabel('Date of Issue')
 plt.ylabel('Number of Violations Issued')
 plt.title('Total Violations Issued')
 plt.show()
 
-plt.plot(viol_date, viol_counts)
-plt.xlim(np.datetime64('2011-01-01T00:00:00.000000000'),
-         np.datetime64('2012-12-31T00:00:00.000000000'))
-plt.xlabel('Date of Issue')
-plt.xticks(rotation = 20)
+years = np.unique(pd.DatetimeIndex(viol_date).year)
+n, bins, patches = plt.hist(pd.DatetimeIndex(viol_date).year,
+bins = np.arange(min(years), max(years) + 2) - 0.5,
+                            edgecolor = 'black',
+                            linewidth = 1)
+cm = plt.cm.YlOrRd
+for i, p in enumerate(patches):
+    plt.setp(p, 'facecolor', cm(i/len(years)))
 plt.ylabel('Number of Violations Issued')
-plt.title('Violations Issued Between 2011 and 2013')
+plt.title('Violations Issued By Year')
+plt.grid(b = True, axis = 'y', linestyle = '--', color = 'k', alpha = 0.2)
 plt.show()
 
 ####################################
