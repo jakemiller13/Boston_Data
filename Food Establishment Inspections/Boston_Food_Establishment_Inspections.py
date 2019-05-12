@@ -259,3 +259,5 @@ plt.show()
 # TODO make a function for plots
 # TODO figure out what "violstatus" is
 # TODO can you just ask them? opengov@cityofboston.gov
+# TODO can you use the * ratings somehow, maybe with NLTK?
+# TODO see if you can figure out if repeat violations
