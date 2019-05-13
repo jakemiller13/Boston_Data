@@ -70,11 +70,10 @@ def get_data(df, link):
         starting link address
     '''
     count = 0
-    while count < 25:#True: # uncomment when running full, otherwise = 25
+    while True: # uncomment when running full, otherwise = 25
         try:
-#            if count % 10 == 0:
-#                print('Count: ' + str(count) + ' | df shape: ' + str(df.shape))
-            print('Count: ' + str(count) + ' | df shape: ' + str(df.shape))
+            if count % 10 == 0:
+                print('Count: ' + str(count) + ' | df shape: ' + str(df.shape))
             link = inc_address(link, count)
             response = urlopen(link).read().decode('utf-8')
             tree = ET.fromstring(response)
@@ -174,22 +173,27 @@ for col in date_cols:
 str_cols = ['viollevel', 'violstatus', 'violdesc']
 df[str_cols] = df[str_cols].astype(str)
 
-
 ###################################
 # PLOT DATES OF ISSUED VIOLATIONS #
 ###################################
-viol_date, viol_counts = date_counts(df, 'viol_date')
+print('Results of inspections: \n' + str(np.unique(df.result)))
+df_fail = df[(df.result != 'HE_Pass') &
+             (df.result != 'Pass') &
+             (df.result != 'PassViol')]
+
+viol_date, viol_counts = date_counts(df_fail, 'viol_date')
 
 plt.plot(viol_date, viol_counts)
 plt.ylim(0, max(viol_counts) + 10)
-plt.xlabel('Date of Issue')
-plt.ylabel('Number of Violations Issued')
-plt.title('Total Violations Issued')
+plt.xlabel('Date Found')
+plt.ylabel('Number of Violations Found')
+plt.title('Total Violations Found')
+plt.grid(b = True, axis = 'y', linestyle = '--')
 plt.show()
 
 years = np.unique(pd.DatetimeIndex(viol_date).year)
 n, bins, patches = plt.hist(pd.DatetimeIndex(viol_date).year,
-bins = np.arange(min(years), max(years) + 2) - 0.5,
+                            bins = np.arange(min(years), max(years) + 2) - 0.5,
                             edgecolor = 'black',
                             linewidth = 1)
 cm = plt.cm.YlOrRd
@@ -210,33 +214,19 @@ print('\nTop 10 days violations were identified [number identified]:')
 for i, j in zip(pd.DatetimeIndex(top_10_dates), top_10_counts):
     print(str(i) + ' [' + str(j) + ']')
 
-inspected = df.loc[
-        (df['iss_date'] == np.datetime64('2012-02-15T00:00:00.000000000')) | 
-        (df['iss_date'] == np.datetime64('2012-02-14T00:00:00.000000000')) |
-        (df['iss_date'] == np.datetime64('2012-02-13T00:00:00.000000000'))]
-
-insp_names, insp_counts = np.unique(inspected['businessname'],
-                                    return_counts = True)
-top_20_insp_index = insp_counts.argsort()[-20:][::-1]
-top_20_names = [i.title() for i in insp_names[top_20_insp_index]]
-top_20_counts = insp_counts[top_20_insp_index]
-
-ax = sns.barplot(x = top_20_counts, y = top_20_names)        
-ax.set_title('Restaurant Violations 02/13/12-02/15/12')
-ax.grid(True, axis = 'x')
-plt.show()
-
 #######################################
 # SEE WHO GOT MOST VIOLATIONS IN 2018 #
 #######################################
-rows_2018 = [row for row in range(len(df))
-             if '2018' in str(df.iloc[row].viol_date)]
-df_2018 = df.iloc[rows_2018]
-names_2018, counts_2018 = np.unique(df_2018['businessname'],
-                                    return_counts = True)
-top_2018_index = counts_2018.argsort()[-20:][::-1]
-top_2018_counts = counts_2018[top_2018_index]
-top_2018_names = [i.title() for i in names_2018[top_2018_index]]
+rows_2018 = [row for row in range(len(df_fail))
+             if '2018' in str(df_fail.iloc[row].viol_date)]
+df_2018 = df_fail.iloc[rows_2018]
+lic_2018, lic_counts_2018 = np.unique(df_2018['licenseno'],
+                                      return_counts = True)
+top_2018_index = lic_counts_2018.argsort()[-20:][::-1]
+top_2018_counts = lic_counts_2018[top_2018_index]
+top_2018_lic = lic_2018[top_2018_index]
+top_2018_names = [df[df.licenseno == i]['businessname'].iloc[0].upper()
+                  for i in top_2018_lic]
 
 ax = sns.barplot(x = top_2018_counts, y = top_2018_names)
 ax.set_title('Violations Found in 2018')
@@ -246,7 +236,8 @@ plt.show()
 #########################################
 # WHAT IS MOST COMMON TYPE OF VIOLATION #
 #########################################
-viol_types, viol_type_counts = np.unique(df.violdesc, return_counts = True)
+viol_types, viol_type_counts = np.unique(df_fail.violdesc,
+                                         return_counts = True)
 top_viol_index = viol_type_counts.argsort()[-20:][::-1]
 top_viols = viol_types[top_viol_index]
 top_viols_counts = viol_type_counts[top_viol_index]
@@ -256,8 +247,19 @@ ax.set_title('Top Violations')
 ax.grid(True, axis = 'x')
 plt.show()
 
+########################################
+# DO ESTABLISHMENTS REPEAT VIOLATIONS? #
+########################################
+# see if it's the same restaurants in 2018 as previously
+for i in top_2018_lic:
+    print(i)
+    print(np.unique(pd.DatetimeIndex(df[df.licenseno == i]['viol_date']).year, return_counts = True))
+
+temp = {}
+for i in top_2018_lic:
+    temp[i] = (np.unique(pd.DatetimeIndex(df[df.licenseno == i]['viol_date']).year, return_counts = True))
+
+
 # TODO make a function for plots
-# TODO figure out what "violstatus" is
-# TODO can you just ask them? opengov@cityofboston.gov
 # TODO can you use the * ratings somehow, maybe with NLTK?
 # TODO see if you can figure out if repeat violations
