@@ -92,9 +92,9 @@ def get_data(df, link):
 def create_dataframe(tree, start, columns):
     '''
     Used in get_data()
-    Returns dataframe created from "tree"
-    Must supply "start" which is root level at which info starts, e.g. "4"
-    "columns" are column headers for dataframe
+    Returns dataframe created from *tree*
+    Must supply *start* which is root level at which info starts, e.g. "4"
+    *columns* are column headers for dataframe
     '''
     info_list = []
     while True:
@@ -126,9 +126,9 @@ def split_datetime(df, dttm_col):
 
 def add_dttm_cols(df, dttm_col, date, time):
     '''
-    Adds new columns in df for "date" and "time"
-    "date" and "time" are from split_datetime()
-    "dttm_col" is the string name of column being split
+    Adds new columns in df for *date* and *time*
+    *date* and *time* are from split_datetime()
+    *dttm_col* is the string name of column being split
     Returns new column names, used when converting to pd.datetime
     '''
     idx = list(df.columns).index(dttm_col)
@@ -141,12 +141,51 @@ def add_dttm_cols(df, dttm_col, date, time):
 
 def date_counts(df, date_col):
     '''
-    Returns dates and counts of "date_col"
+    Returns dates and counts of *date_col*
     Used when counting violations given
     Temporarily drops rows that are NaT to avoid extra counting
     '''
     return np.unique(df.dropna(subset = [date_col])[date_col],
                      return_counts = True)
+
+def find_top_violators(df, year, k_violators):
+    '''
+    Finds top *k-violators* based on *year*
+    *df*: can be either dataframe, but should be "df_fail"
+    returns: top_names, top_lic, top_counts
+    '''
+    rows = [row for row in range(len(df))
+            if str(year) in str(df.iloc[row].viol_date)]
+    df_year = df.iloc[rows]
+    lic_no, lic_counts = np.unique(df_year['licenseno'], return_counts = True)
+    top_index = lic_counts.argsort()[-k_violators:][::-1]
+    top_counts = lic_counts[top_index]
+    top_lic = lic_no[top_index]
+    top_names = [df[df.licenseno == i]['businessname'].iloc[0].upper()
+                 for i in top_lic]
+    return top_names, top_lic, top_counts
+    
+def plot_top_violators(df, year, k_violators):
+    '''
+    Plots top violators by accessing "find_top_violators"
+    *df*: can be either dataframe, but should be "df_fail"
+    *year*: year to look at top violators
+    *k_violators*: top k-violators for year
+    '''
+    top_names, top_lic, top_counts = find_top_violators(df, year, k_violators)
+    plt.figure(figsize = (10, 10))
+    for i, lic in enumerate(top_lic):
+        temp_years, temp_counts = np.unique(pd.DatetimeIndex(
+                                  df[df['licenseno'] == lic]
+                                  ['viol_date']).year,
+                                  return_counts = True)
+        plt.plot(temp_years, temp_counts, label = top_names[i])
+    plt.legend(loc = 'best')
+    plt.xlim(2008, 2018)
+    plt.xlabel('Year')
+    plt.ylabel('Violations')
+    plt.title('Violations Per Year for Top ' + str(year) + '-Violators')
+    plt.show()
 
 ############################
 # GATHER AND CLEAN UP DATA #
@@ -169,20 +208,23 @@ for col in datetime_cols:
 for col in date_cols:
     df[col] = pd.to_datetime(df[col], errors = 'ignore')
 
-# Drop rows that are missing date-related info
+# Ensure string columns are actually strings
 str_cols = ['viollevel', 'violstatus', 'violdesc']
 df[str_cols] = df[str_cols].astype(str)
 
-###################################
-# PLOT DATES OF ISSUED VIOLATIONS #
-###################################
-print('Results of inspections: \n' + str(np.unique(df.result)))
+############################
+# PLOT DATES OF VIOLATIONS #
+############################
+print('\nResults of inspections: \n' + str(np.unique(df.result)))
+
+# Remove "passing" inspections
 df_fail = df[(df.result != 'HE_Pass') &
              (df.result != 'Pass') &
              (df.result != 'PassViol')]
 
 viol_date, viol_counts = date_counts(df_fail, 'viol_date')
 
+# Plot total violations found in dataset
 plt.plot(viol_date, viol_counts)
 plt.ylim(0, max(viol_counts) + 10)
 plt.xlabel('Date Found')
@@ -191,6 +233,7 @@ plt.title('Total Violations Found')
 plt.grid(b = True, axis = 'y', linestyle = '--')
 plt.show()
 
+# Line plot above not very useful, try a histogram
 years = np.unique(pd.DatetimeIndex(viol_date).year)
 n, bins, patches = plt.hist(pd.DatetimeIndex(viol_date).year,
                             bins = np.arange(min(years), max(years) + 2) - 0.5,
@@ -199,43 +242,24 @@ n, bins, patches = plt.hist(pd.DatetimeIndex(viol_date).year,
 cm = plt.cm.YlOrRd
 for i, p in enumerate(patches):
     plt.setp(p, 'facecolor', cm(i/len(years)))
-plt.ylabel('Number of Violations Issued')
+plt.ylabel('Number of Violations Found')
 plt.title('Violations Issued By Year')
 plt.grid(b = True, axis = 'y', linestyle = '--', color = 'k', alpha = 0.2)
 plt.show()
 
-####################################
-# SEE WHAT WE CAN DEDUCE FROM PLOT #
-####################################
+######################################
+# CHECK DAYS WITH HIGHEST VIOLATIONS #
+######################################
 top_10_index = viol_counts.argsort()[-10:][::-1]
 top_10_dates = viol_date[top_10_index]
 top_10_counts = viol_counts[top_10_index]
 print('\nTop 10 days violations were identified [number identified]:')
 for i, j in zip(pd.DatetimeIndex(top_10_dates), top_10_counts):
-    print(str(i) + ' [' + str(j) + ']')
+    print(str(i.date()) + ' [' + str(j) + ']')
 
-#######################################
-# SEE WHO GOT MOST VIOLATIONS IN 2018 #
-#######################################
-rows_2018 = [row for row in range(len(df_fail))
-             if '2018' in str(df_fail.iloc[row].viol_date)]
-df_2018 = df_fail.iloc[rows_2018]
-lic_2018, lic_counts_2018 = np.unique(df_2018['licenseno'],
-                                      return_counts = True)
-top_2018_index = lic_counts_2018.argsort()[-20:][::-1]
-top_2018_counts = lic_counts_2018[top_2018_index]
-top_2018_lic = lic_2018[top_2018_index]
-top_2018_names = [df[df.licenseno == i]['businessname'].iloc[0].upper()
-                  for i in top_2018_lic]
-
-ax = sns.barplot(x = top_2018_counts, y = top_2018_names)
-ax.set_title('Violations Found in 2018')
-ax.grid(True, axis = 'x')
-plt.show()
-
-#########################################
-# WHAT IS MOST COMMON TYPE OF VIOLATION #
-#########################################
+###################################
+# MOST COMMON TYPES OF VIOLATIONS #
+###################################
 viol_types, viol_type_counts = np.unique(df_fail.violdesc,
                                          return_counts = True)
 top_viol_index = viol_type_counts.argsort()[-20:][::-1]
@@ -247,19 +271,19 @@ ax.set_title('Top Violations')
 ax.grid(True, axis = 'x')
 plt.show()
 
+#########################
+# TOP VIOLATORS IN 2018 #
+#########################
+top_2018_names, top_2018_lic, top_2018_counts = \
+                              find_top_violators(df_fail, 2018, 20)
+ax = sns.barplot(x = top_2018_counts, y = top_2018_names)
+ax.set_title('Violations Found in 2018')
+ax.grid(True, axis = 'x')
+plt.show()
+
 ########################################
-# DO ESTABLISHMENTS REPEAT VIOLATIONS? #
+# PLOT TOP VIOLATORS FOR VARIOUS YEARS #
 ########################################
-# see if it's the same restaurants in 2018 as previously
-for i in top_2018_lic:
-    print(i)
-    print(np.unique(pd.DatetimeIndex(df[df.licenseno == i]['viol_date']).year, return_counts = True))
-
-temp = {}
-for i in top_2018_lic:
-    temp[i] = (np.unique(pd.DatetimeIndex(df[df.licenseno == i]['viol_date']).year, return_counts = True))
-
-
-# TODO make a function for plots
-# TODO can you use the * ratings somehow, maybe with NLTK?
-# TODO see if you can figure out if repeat violations
+plot_top_violators(df_fail, 2008, 20)
+plot_top_violators(df_fail, 2013, 20)
+plot_top_violators(df_fail, 2018, 20)
