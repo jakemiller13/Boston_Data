@@ -59,7 +59,7 @@ def inc_address(link, inc):
     '''
     increment = inc * 1000
     link = link + '?$top=1000&$skip=' + str(increment)
-    return link  
+    return link
 
 def get_data(df, link):
     '''
